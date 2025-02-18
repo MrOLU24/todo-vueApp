@@ -1,19 +1,8 @@
 <template>
-  <div id="app">
-    <h1>Vue Todo App</h1>
+  <div class="min-h-screen bg-gray-100">
+    <nav class="bg-blue-500 p-4 text-white">
+      <router-link to="/" class="mr-4">Home</router-link>
+    </nav>
+    <router-view />
   </div>
 </template>
-
-<script>
-
-
-</script>
-
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>
