@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 
 const todos = ref([]);
 const loading = ref(true);
@@ -9,25 +9,42 @@ const filterStatus = ref("all");
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
-// Modal states for creating & editing
+// Modal states
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const newTodoTitle = ref("");
-const isSubmitting = ref(false);
 const selectedTodo = ref(null);
 
-// Fetch To-Dos
+// Load from Local Storage
+const loadTodos = () => {
+  const savedTodos = localStorage.getItem("todos");
+  if (savedTodos) {
+    todos.value = JSON.parse(savedTodos);
+  }
+};
+
+// Save to Local Storage
+const saveTodos = () => {
+  localStorage.setItem("todos", JSON.stringify(todos.value));
+};
+
+// Fetch To-Dos from API only if Local Storage is empty
 const fetchTodos = async () => {
   try {
-    const response = await fetch("https://jsonplaceholder.typicode.com/todos");
-    if (!response.ok) throw new Error("Failed to fetch To-Dos");
-    todos.value = await response.json();
+    if (todos.value.length === 0) {
+      const response = await fetch("https://jsonplaceholder.typicode.com/todos");
+      if (!response.ok) throw new Error("Failed to fetch To-Dos");
+      todos.value = await response.json();
+    }
   } catch (err) {
     error.value = err.message;
   } finally {
     loading.value = false;
   }
 };
+
+// Watch todos and update Local Storage when it changes
+watch(todos, saveTodos, { deep: true });
 
 // Apply search and filtering
 const filteredTodos = computed(() => {
@@ -56,21 +73,6 @@ const goToPage = (page) => {
   }
 };
 
-// Create a new To-Do
-const addTodo = () => {
-  if (!newTodoTitle.value.trim()) return;
-
-  const newTodo = {
-    id: todos.value.length + 1,
-    title: newTodoTitle.value,
-    completed: false,
-  };
-
-  todos.value.unshift(newTodo);
-  newTodoTitle.value = "";
-  showCreateModal.value = false;
-};
-
 // Open edit modal
 const openEditModal = (todo) => {
   selectedTodo.value = { ...todo };
@@ -88,17 +90,38 @@ const saveTodo = () => {
   showEditModal.value = false;
 };
 
-// Fetch To-Dos on mount
-onMounted(fetchTodos);
+// Delete To-Do
+const deleteTodo = (id) => {
+  if (confirm("Are you sure you want to delete this To-Do?")) {
+    todos.value = todos.value.filter((todo) => todo.id !== id);
+  }
+};
+
+// Add New To-Do
+const addTodo = () => {
+  if (!newTodoTitle.value.trim()) return;
+
+  const newTodo = {
+    id: Date.now(),
+    title: newTodoTitle.value,
+    completed: false,
+  };
+
+  todos.value.unshift(newTodo);
+  newTodoTitle.value = "";
+  showCreateModal.value = false;
+};
+
+// Load from Local Storage & fetch from API on mount
+onMounted(() => {
+  loadTodos();
+  fetchTodos();
+});
 </script>
 
 <template>
   <div class="p-6">
     <h1 class="text-2xl font-bold">To-Do List</h1>
-
-    <button @click="showCreateModal = true" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md">
-      + Create To-Do
-    </button>
 
     <div class="mt-4 flex gap-4">
       <input type="text" v-model="searchQuery" placeholder="Search To-Dos..." class="p-2 border rounded-md w-1/2" />
@@ -109,8 +132,16 @@ onMounted(fetchTodos);
       </select>
     </div>
 
+    <button @click="showCreateModal = true" class="mt-4 px-4 py-2 bg-green-500 text-white rounded-md">
+      + Add New To-Do
+    </button>
+
     <ul v-if="!loading && !error" class="mt-4 space-y-3">
-      <li v-for="todo in paginatedTodos" :key="todo.id" class="p-3 bg-white shadow rounded-md border flex justify-between">
+      <li
+        v-for="todo in paginatedTodos"
+        :key="todo.id"
+        class="p-3 bg-white shadow rounded-md border flex justify-between"
+      >
         <div>
           <router-link :to="`/todo/${todo.id}`" class="text-blue-600 hover:underline">
             {{ todo.title }}
@@ -119,14 +150,20 @@ onMounted(fetchTodos);
             ({{ todo.completed ? "Completed" : "Pending" }})
           </span>
         </div>
-        <button @click="openEditModal(todo)" class="px-2 py-1 bg-yellow-500 text-white rounded-md">
-          Edit
-        </button>
+        <div class="flex gap-2">
+          <button @click="openEditModal(todo)" class="px-2 py-1 bg-yellow-500 text-white rounded-md">
+            Edit
+          </button>
+          <button @click="deleteTodo(todo.id)" class="px-2 py-1 bg-red-500 text-white rounded-md">
+            Delete
+          </button>
+        </div>
       </li>
     </ul>
 
     <div v-if="totalPages > 1" class="mt-6 flex justify-center gap-2">
-      <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" class="px-3 py-1 border rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
+      <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1"
+        class="px-3 py-1 border rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
         Prev
       </button>
 
@@ -134,19 +171,20 @@ onMounted(fetchTodos);
         Page {{ currentPage }} of {{ totalPages }}
       </span>
 
-      <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" class="px-3 py-1 border rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
+      <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages"
+        class="px-3 py-1 border rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
         Next
       </button>
     </div>
 
-    <!-- Create Modal -->
+    <!-- Add To-Do Modal -->
     <div v-if="showCreateModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
       <div class="bg-white p-6 rounded-md w-96">
-        <h2 class="text-xl font-bold">Create New To-Do</h2>
-        <input type="text" v-model="newTodoTitle" placeholder="Enter To-Do title..." class="mt-4 p-2 border rounded-md w-full" />
+        <h2 class="text-xl font-bold">Add New To-Do</h2>
+        <input type="text" v-model="newTodoTitle" placeholder="Enter title..." class="mt-4 p-2 border rounded-md w-full" />
         <div class="mt-4 flex justify-end gap-2">
           <button @click="showCreateModal = false" class="px-4 py-2 bg-gray-400 text-white rounded-md">Cancel</button>
-          <button @click="addTodo" class="px-4 py-2 bg-blue-500 text-white rounded-md">Add</button>
+          <button @click="addTodo" class="px-4 py-2 bg-green-500 text-white rounded-md">Add</button>
         </div>
       </div>
     </div>
