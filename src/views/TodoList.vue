@@ -15,6 +15,20 @@ const showEditModal = ref(false);
 const newTodoTitle = ref("");
 const selectedTodo = ref(null);
 
+// Notification state
+const notification = ref("");
+const showNotification = ref(false);
+
+// Show notification
+const triggerNotification = (message) => {
+  notification.value = message;
+  showNotification.value = true;
+
+  setTimeout(() => {
+    showNotification.value = false;
+  }, 3000);
+};
+
 // Load from Local Storage
 const loadTodos = () => {
   const savedTodos = localStorage.getItem("todos");
@@ -88,12 +102,14 @@ const saveTodo = () => {
     todos.value[index] = { ...selectedTodo.value };
   }
   showEditModal.value = false;
+  triggerNotification("To-Do updated successfully!");
 };
 
 // Delete To-Do
 const deleteTodo = (id) => {
   if (confirm("Are you sure you want to delete this To-Do?")) {
     todos.value = todos.value.filter((todo) => todo.id !== id);
+    triggerNotification("To-Do deleted successfully!");
   }
 };
 
@@ -110,6 +126,7 @@ const addTodo = () => {
   todos.value.unshift(newTodo);
   newTodoTitle.value = "";
   showCreateModal.value = false;
+  triggerNotification("New To-Do added successfully!");
 };
 
 // Load from Local Storage & fetch from API on mount
@@ -120,8 +137,13 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-6">
+  <div class="p-6 relative">
     <h1 class="text-2xl font-bold">To-Do List</h1>
+
+    <!-- Notification -->
+    <div v-if="showNotification" class="fixed top-4 right-4 px-4 py-2 bg-green-500 text-white rounded-md shadow-lg">
+      {{ notification }}
+    </div>
 
     <div class="mt-4 flex gap-4">
       <input type="text" v-model="searchQuery" placeholder="Search To-Dos..." class="p-2 border rounded-md w-1/2" />
@@ -160,22 +182,6 @@ onMounted(() => {
         </div>
       </li>
     </ul>
-
-    <div v-if="totalPages > 1" class="mt-6 flex justify-center gap-2">
-      <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1"
-        class="px-3 py-1 border rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
-        Prev
-      </button>
-
-      <span class="px-4 py-1 border rounded-md bg-blue-500 text-white">
-        Page {{ currentPage }} of {{ totalPages }}
-      </span>
-
-      <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages"
-        class="px-3 py-1 border rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
-        Next
-      </button>
-    </div>
 
     <!-- Add To-Do Modal -->
     <div v-if="showCreateModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
