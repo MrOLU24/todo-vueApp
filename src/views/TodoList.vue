@@ -67,8 +67,8 @@ onMounted(fetchTodos);
       <input
         type="text"
         v-model="searchQuery"
-        placeholder="Search To-Dos..."
-        class="p-2 border rounded-md w-1/2"
+        placeholder="Search To-Do's...."
+        class="p-2 border rounded-md w-1/2 cursor-pointer hover:border-blue-200"
       />
 
       <select v-model="filterStatus" class="p-2 border rounded-md">
