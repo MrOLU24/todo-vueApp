@@ -22,7 +22,6 @@ const filteredTodos = computed(() => {
       filterStatus.value === "all" ||
       (filterStatus.value === "completed" && todo.completed) ||
       (filterStatus.value === "pending" && !todo.completed);
-
     return matchesSearch && matchesStatus;
   });
 });

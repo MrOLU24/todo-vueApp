@@ -1,18 +1,32 @@
 <script setup>
-defineProps(["search", "filter"]);
-defineEmits(["update:search", "update:filter"]);
+import { defineProps, defineEmits, ref, watch } from "vue";
+
+const props = defineProps({
+  search: String,
+  filter: String,
+});
+
+const emit = defineEmits(["update:search", "update:filter"]);
+
+const searchQuery = ref(props.search);
+const filterStatus = ref(props.filter);
+
+watch(searchQuery, (newVal) => emit("update:search", newVal));
+watch(filterStatus, (newVal) => emit("update:filter", newVal));
 </script>
 
 <template>
-  <div class="mt-4 flex gap-4">
+  <div class="flex gap-4 my-4">
+    <!-- Search Input -->
     <input
       type="text"
-      :value="search"
-      @input="$emit('update:search', $event.target.value)"
+      v-model="searchQuery"
       placeholder="Search To-Dos..."
-      class="p-2 border rounded-md w-1/2"
+      class="border p-2 rounded-md w-full"
     />
-    <select :value="filter" @change="$emit('update:filter', $event.target.value)" class="p-2 border rounded-md">
+
+    <!-- Filter Dropdown -->
+    <select v-model="filterStatus" class="border p-2 rounded-md">
       <option value="all">All</option>
       <option value="completed">Completed</option>
       <option value="pending">Pending</option>
