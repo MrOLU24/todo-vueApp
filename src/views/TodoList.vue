@@ -16,9 +16,15 @@ const selectedTodo = ref(null);
 
 // Computed properties for filtering & pagination
 const filteredTodos = computed(() => {
-  return todos.value.filter((todo) =>
-    todo.title.toLowerCase().includes(searchQuery.value.toLowerCase())
-  );
+  return todos.value.filter((todo) => {
+    const matchesSearch = todo.title.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const matchesStatus =
+      filterStatus.value === "all" ||
+      (filterStatus.value === "completed" && todo.completed) ||
+      (filterStatus.value === "pending" && !todo.completed);
+
+    return matchesSearch && matchesStatus;
+  });
 });
 
 const paginatedTodos = computed(() => {
@@ -49,6 +55,13 @@ const deleteTodo = (id) => {
     todos.value = todos.value.filter((todo) => todo.id !== id);
   }
 };
+
+// Clear Completed To-Dos
+const clearCompletedTodos = () => {
+  if (confirm("Are you sure you want to remove all completed To-Dos?")) {
+    todos.value = todos.value.filter((todo) => !todo.completed);
+  }
+};
 </script>
 
 <template>
@@ -57,6 +70,14 @@ const deleteTodo = (id) => {
 
     <!-- Search & Filter Component -->
     <SearchFilter v-model:search="searchQuery" v-model:filter="filterStatus" />
+
+    <!-- Clear Completed To-Dos Button -->
+    <button
+      @click="clearCompletedTodos"
+      class="mt-4 px-4 py-2 bg-red-500 text-white rounded-md"
+    >
+      Clear Completed
+    </button>
 
     <!-- Add To-Do Modal -->
     <AddTodoModal />
