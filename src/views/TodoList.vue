@@ -1,64 +1,23 @@
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { computed, ref } from "vue";
+import TodoItem from "../components/TodoItem.vue";
+import Pagination from "../components/Pagination.vue";
+import SearchFilter from "../components/SearchFilter.vue";
+import { useTodos } from "../composables/useTodos";
 
-const todos = ref([]);
-const loading = ref(true);
-const error = ref(null);
+const { todos } = useTodos(); // ✅ Use `todos` correctly
 const searchQuery = ref("");
 const filterStatus = ref("all");
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
-// Modal states
-const showCreateModal = ref(false);
-const showEditModal = ref(false);
-const newTodoTitle = ref("");
-const selectedTodo = ref(null);
-
-// Load from Local Storage
-const loadTodos = () => {
-  const savedTodos = localStorage.getItem("todos");
-  if (savedTodos) {
-    todos.value = JSON.parse(savedTodos);
-  }
-};
-
-// Save to Local Storage
-const saveTodos = () => {
-  localStorage.setItem("todos", JSON.stringify(todos.value));
-};
-
-// Fetch To-Dos from API only if Local Storage is empty
-const fetchTodos = async () => {
-  try {
-    if (todos.value.length === 0) {
-      const response = await fetch("https://jsonplaceholder.typicode.com/todos");
-      if (!response.ok) throw new Error("Failed to fetch To-Dos");
-      todos.value = await response.json();
-    }
-  } catch (err) {
-    error.value = err.message;
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Watch todos and update Local Storage when it changes
-watch(todos, saveTodos, { deep: true });
-
-// Apply search and filtering
+// Computed properties for filtering & pagination
 const filteredTodos = computed(() => {
-  return todos.value.filter((todo) => {
-    return (
-      todo.title.toLowerCase().includes(searchQuery.value.toLowerCase()) &&
-      (filterStatus.value === "all" ||
-        (filterStatus.value === "completed" && todo.completed) ||
-        (filterStatus.value === "pending" && !todo.completed))
-    );
-  });
+  return todos.value.filter((todo) =>
+    todo.title.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
 });
 
-// Pagination logic
 const paginatedTodos = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
   return filteredTodos.value.slice(start, start + itemsPerPage);
@@ -66,143 +25,27 @@ const paginatedTodos = computed(() => {
 
 const totalPages = computed(() => Math.ceil(filteredTodos.value.length / itemsPerPage));
 
-// Change page
 const goToPage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page;
   }
 };
-
-// Open edit modal
-const openEditModal = (todo) => {
-  selectedTodo.value = { ...todo };
-  showEditModal.value = true;
-};
-
-// Save edited To-Do
-const saveTodo = () => {
-  if (!selectedTodo.value) return;
-
-  const index = todos.value.findIndex((t) => t.id === selectedTodo.value.id);
-  if (index !== -1) {
-    todos.value[index] = { ...selectedTodo.value };
-  }
-  showEditModal.value = false;
-};
-
-// Delete To-Do
-const deleteTodo = (id) => {
-  if (confirm("Are you sure you want to delete this To-Do?")) {
-    todos.value = todos.value.filter((todo) => todo.id !== id);
-  }
-};
-
-// Add New To-Do
-const addTodo = () => {
-  if (!newTodoTitle.value.trim()) return;
-
-  const newTodo = {
-    id: Date.now(),
-    title: newTodoTitle.value,
-    completed: false,
-  };
-
-  todos.value.unshift(newTodo);
-  newTodoTitle.value = "";
-  showCreateModal.value = false;
-};
-
-// Load from Local Storage & fetch from API on mount
-onMounted(() => {
-  loadTodos();
-  fetchTodos();
-});
 </script>
 
 <template>
   <div class="p-6">
     <h1 class="text-2xl font-bold">To-Do List</h1>
 
-    <div class="mt-4 flex gap-4">
-      <input type="text" v-model="searchQuery" placeholder="Search To-Dos..." class="p-2 border rounded-md w-1/2" />
-      <select v-model="filterStatus" class="p-2 border rounded-md">
-        <option value="all">All</option>
-        <option value="completed">Completed</option>
-        <option value="pending">Pending</option>
-      </select>
-    </div>
+    <!-- Search & Filter Component -->
+    <SearchFilter v-model:search="searchQuery" v-model:filter="filterStatus" />
 
-    <button @click="showCreateModal = true" class="mt-4 px-4 py-2 bg-green-500 text-white rounded-md">
-      + Add New To-Do
-    </button>
-
-    <ul v-if="!loading && !error" class="mt-4 space-y-3">
-      <li
-        v-for="todo in paginatedTodos"
-        :key="todo.id"
-        class="p-3 bg-white shadow rounded-md border flex justify-between"
-      >
-        <div>
-          <router-link :to="`/todo/${todo.id}`" class="text-blue-600 hover:underline">
-            {{ todo.title }}
-          </router-link>
-          <span :class="todo.completed ? 'text-green-500' : 'text-red-500'" class="ml-2">
-            ({{ todo.completed ? "Completed" : "Pending" }})
-          </span>
-        </div>
-        <div class="flex gap-2">
-          <button @click="openEditModal(todo)" class="px-2 py-1 bg-yellow-500 text-white rounded-md">
-            Edit
-          </button>
-          <button @click="deleteTodo(todo.id)" class="px-2 py-1 bg-red-500 text-white rounded-md">
-            Delete
-          </button>
-        </div>
-      </li>
+    <!-- To-Do List -->
+    <ul v-if="paginatedTodos.length" class="mt-4 space-y-3">
+      <TodoItem v-for="todo in paginatedTodos" :key="todo.id" :todo="todo" />
     </ul>
+    <p v-else class="text-gray-500">No To-Dos found.</p>
 
-    <div v-if="totalPages > 1" class="mt-6 flex justify-center gap-2">
-      <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1"
-        class="px-3 py-1 border rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
-        Prev
-      </button>
-
-      <span class="px-4 py-1 border rounded-md bg-blue-500 text-white">
-        Page {{ currentPage }} of {{ totalPages }}
-      </span>
-
-      <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages"
-        class="px-3 py-1 border rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
-        Next
-      </button>
-    </div>
-
-    <!-- Add To-Do Modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-      <div class="bg-white p-6 rounded-md w-96">
-        <h2 class="text-xl font-bold">Add New To-Do</h2>
-        <input type="text" v-model="newTodoTitle" placeholder="Enter title..." class="mt-4 p-2 border rounded-md w-full" />
-        <div class="mt-4 flex justify-end gap-2">
-          <button @click="showCreateModal = false" class="px-4 py-2 bg-gray-400 text-white rounded-md">Cancel</button>
-          <button @click="addTodo" class="px-4 py-2 bg-green-500 text-white rounded-md">Add</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Edit Modal -->
-    <div v-if="showEditModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-      <div class="bg-white p-6 rounded-md w-96">
-        <h2 class="text-xl font-bold">Edit To-Do</h2>
-        <input type="text" v-model="selectedTodo.title" placeholder="Edit title..." class="mt-4 p-2 border rounded-md w-full" />
-        <select v-model="selectedTodo.completed" class="mt-4 p-2 border rounded-md w-full">
-          <option :value="true">Completed</option>
-          <option :value="false">Pending</option>
-        </select>
-        <div class="mt-4 flex justify-end gap-2">
-          <button @click="showEditModal = false" class="px-4 py-2 bg-gray-400 text-white rounded-md">Cancel</button>
-          <button @click="saveTodo" class="px-4 py-2 bg-blue-500 text-white rounded-md">Save</button>
-        </div>
-      </div>
-    </div>
+    <!-- Pagination Component -->
+    <Pagination :currentPage="currentPage" :totalPages="totalPages" @changePage="goToPage" />
   </div>
 </template>
