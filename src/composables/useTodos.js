@@ -16,10 +16,10 @@ export function useTodos() {
     localStorage.setItem("todos", JSON.stringify(todos.value));
   };
 
-  // Watch todos and update Local Storage when it changes
+  
   watch(todos, saveTodos, { deep: true });
 
-  // Fetch To-Dos from API if Local Storage is empty
+ 
   const fetchTodos = async () => {
     if (todos.value.length === 0) {
       try {
@@ -32,17 +32,20 @@ export function useTodos() {
     }
   };
 
-  // Add a new To-Do
+
   const addTodo = (newTodo) => {
     const newTask = {
-      id: Date.now(), // Generate a unique ID
+      id: Date.now(), 
       title: newTodo.title,
       completed: false,
     };
-    todos.value.unshift(newTask); // Add to the beginning of the list
+
+    todos.value = [newTask, ...todos.value]; 
+    console.log("Updated To-Dos:", todos.value);
+
   };
 
-  // Load from Local Storage & fetch from API on mount
+
   onMounted(() => {
     loadTodos();
     fetchTodos();
