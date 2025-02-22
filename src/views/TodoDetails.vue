@@ -12,11 +12,11 @@ const fetchTodoDetails = async () => {
     const id = Number(route.params.id); // Convert ID to number
     const savedTodos = JSON.parse(localStorage.getItem("todos")) || [];
 
-    // Find in Local Storage first
+    
     todo.value = savedTodos.find((t) => t.id === id);
 
     if (!todo.value) {
-      // If not found, fetch from API
+    
       const response = await fetch(
         `https://jsonplaceholder.typicode.com/todos/${id}`
       );
