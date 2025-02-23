@@ -17,7 +17,7 @@ watch(filterStatus, (newVal) => emit("update:filter", newVal));
 
 <template>
   <div class="flex gap-4 my-4">
-    <!-- Search Input -->
+ 
     <input
       type="text"
       v-model="searchQuery"
@@ -25,7 +25,7 @@ watch(filterStatus, (newVal) => emit("update:filter", newVal));
       class="border p-2 rounded-md w-full"
     />
 
-    <!-- Filter Dropdown -->
+
     <select v-model="filterStatus" class="border p-2 rounded-md">
       <option value="all">All</option>
       <option value="completed">Completed</option>

@@ -9,7 +9,7 @@ const error = ref(null);
 
 const fetchTodoDetails = async () => {
   try {
-    const id = Number(route.params.id); // Convert ID to number
+    const id = Number(route.params.id); 
     const savedTodos = JSON.parse(localStorage.getItem("todos")) || [];
 
     
